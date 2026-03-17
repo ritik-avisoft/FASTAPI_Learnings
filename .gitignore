@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Editor/IDE files
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs and reports
+*.log
+coverage.xml
+htmlcov/
+
+# Python package build
+build/
+dist/
+*.egg-info/
+
+# Uvicorn run files
+*.pid
