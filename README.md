@@ -4,53 +4,33 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 
 ---
 
-## What I Learned
+## Phase 1 — In-Memory CRUD (Starting Point)
+- Simulated a database using a Python list `my_posts`
+- Full CRUD using helper functions `find_post()` and `find_index_post()`
+- Learned: FastAPI setup, decorators, Pydantic models, path params, status codes, HTTPException
 
-### 1. FastAPI App Setup
-- Creating a FastAPI instance with `FastAPI()`
-- Running the app using **Uvicorn** as the ASGI server
-
-### 2. Path Operations (Routes)
-- Defining routes using `@app.get()`, `@app.post()`, `@app.put()`, `@app.delete()`
-- Understanding HTTP methods and when to use each
-
-### 3. Request Body & Pydantic Models
-- Using `pydantic.BaseModel` to define and validate request schemas
-- Auto-parsing incoming JSON into typed Python models
-
-### 4. Path Parameters & Type Validation
-- Extracting dynamic values from URLs using `{id}` syntax
-- FastAPI auto-validates and converts types (e.g., `id: int`)
-
-### 5. Response & Status Codes
-- Setting status codes via `status`, `Response`, and decorator-level `status_code`
-- e.g., `201 Created`, `204 No Content`, `404 Not Found`
-
-### 6. HTTPException & Error Handling
-- Raising `HTTPException` with status codes and detail messages
-- Handling **404 Not Found** when a resource doesn't exist
-
-### 7. In-Memory CRUD (Phase 1)
-- Simulated a database using a Python list (`my_posts`)
-- Implemented full CRUD with helper functions `find_post()` and `find_index_post()`
-
-### 8. PostgreSQL with psycopg2 (Phase 2)
+## Phase 2 — PostgreSQL with psycopg2
 - Connected to a real **PostgreSQL** database using `psycopg2`
 - Used `RealDictCursor` to return rows as dictionaries
-- Executed raw SQL queries: `SELECT`, `INSERT`, `UPDATE`, `DELETE`
-- Used `RETURNING *` to get the affected row back
-- Added a retry loop for database connection on startup
+- Executed raw SQL: `SELECT`, `INSERT`, `UPDATE`, `DELETE` with `RETURNING *`
+- Added a retry loop for DB connection on startup
+- Learned: raw SQL queries, `conn.commit()`, parameterized queries with `%s`
 
-### 9. SQLAlchemy ORM Setup (Phase 3)
-- Configured `database.py` with `create_engine`, `sessionmaker`, and `declarative_base`
-- Defined a `Post` ORM model in `models.py` mapped to the `posts` table
-- Used `models.Base.metadata.create_all(bind=engine)` to auto-create tables
-- Set up a `get_db()` dependency function for session management
+## Phase 3 — SQLAlchemy ORM (Current)
+- Configured `database.py` with `create_engine`, `sessionmaker`, `declarative_base`
+- Defined `Post` ORM model in `models.py` mapped to the `posts` table
+- Auto-creates tables on startup with `models.Base.metadata.create_all(bind=engine)`
+- Replaced all raw SQL with ORM calls: `db.query()`, `db.add()`, `db.commit()`, `db.refresh()`
+- Learned: ORM, Dependency Injection with `Depends(get_db)`, `synchronize_session=False`
 
-### 10. Environment Variables
-- Used `python-dotenv` to load secrets from a `.env` file
-- Stored DB credentials (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) securely
-- Used `urllib.parse.quote_plus` to safely encode the password in the DB URL
+## Core Concepts (All Phases)
+- **Decorators** — `@app.get()` registers a function as an API route
+- **Pydantic** — validates request body, `model_dump()` converts to dict
+- **Path Parameters** — `{id}` in URL, auto type-converted by FastAPI
+- **Status Codes** — `201 Created`, `204 No Content`, `404 Not Found`
+- **HTTPException** — raises an error response immediately
+- **Dependency Injection** — `Depends(get_db)` auto-provides a DB session per request
+- **Environment Variables** — credentials stored in `.env`, never hardcoded
 
 ---
 
@@ -64,35 +44,41 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 
 ---
 
-## Before vs Now — What Changed
+## How It Evolved — Phase by Phase
 
-### Storage
-| Before (Phase 1) | Now (Phase 2 & 3) |
-|---|---|
-| Python list `my_posts` in memory | Real PostgreSQL database |
-| Data lost on every restart | Data persists across restarts |
-| No setup needed | Requires DB connection + credentials |
+### Data Storage
+| Phase 1 | Phase 2 | Phase 3 |
+|---|---|---|
+| Python list in memory | PostgreSQL via psycopg2 | PostgreSQL via SQLAlchemy ORM |
+| Lost on restart | Persists | Persists |
+| No setup | DB connection needed | DB + ORM models needed |
 
-### Data Access
-| Before | Now |
-|---|---|
-| `find_post(id)` — manual loop over list | `cursor.execute("SELECT * FROM posts WHERE id = %s")` |
-| `my_posts.append(post_dict)` | `INSERT INTO posts ... RETURNING *` |
-| `my_posts.pop(index)` | `DELETE FROM posts WHERE id = %s RETURNING *` |
-| `my_posts[index] = post_dict` | `UPDATE posts SET ... WHERE id = %s RETURNING *` |
+### Data Access (GET one post)
+| Phase 1 | Phase 2 | Phase 3 |
+|---|---|---|
+| `find_post(id)` loop | `cursor.execute("SELECT * FROM posts WHERE id = %s")` | `db.query(models.Post).filter(models.Post.id == id).first()` |
+
+### Data Access (CREATE post)
+| Phase 1 | Phase 2 | Phase 3 |
+|---|---|---|
+| `my_posts.append(post_dict)` | `cursor.execute("INSERT INTO posts ... RETURNING *")` | `db.add(post)` → `db.commit()` → `db.refresh(post)` |
+
+### Data Access (DELETE post)
+| Phase 1 | Phase 2 | Phase 3 |
+|---|---|---|
+| `my_posts.pop(index)` | `cursor.execute("DELETE FROM posts WHERE id=%s RETURNING *")` | `post.delete(synchronize_session=False)` → `db.commit()` |
 
 ### Project Files
-| Before | Now |
+| Phase 1 | Phase 3 |
 |---|---|
-| Only `main.py` | Added `database.py` + `models.py` |
-| No DB config | SQLAlchemy engine, session, `Base` in `database.py` |
-| No ORM models | `Post` ORM model in `models.py` maps to `posts` table |
-| Hardcoded data | Credentials loaded from `.env` via `python-dotenv` |
+| Only `main.py` | `main.py` + `database.py` + `models.py` |
+| No DB config | SQLAlchemy engine, session, `Base` |
+| Hardcoded data | Credentials in `.env` via `python-dotenv` |
 
 ### Dependencies
-| Before | Now |
-|---|---|
-| `fastapi`, `uvicorn` | + `psycopg2-binary`, `sqlalchemy`, `python-dotenv` |
+| Phase 1 | Phase 2 | Phase 3 |
+|---|---|---|
+| `fastapi`, `uvicorn` | + `psycopg2-binary` | + `sqlalchemy`, `python-dotenv` |
 
 ---
 

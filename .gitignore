@@ -18,6 +18,9 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+# Personal notes
+NOTES.md
+
 # Logs and reports
 *.log
 coverage.xml

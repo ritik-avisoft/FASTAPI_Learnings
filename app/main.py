@@ -2,15 +2,15 @@ from fastapi import FastAPI
 from fastapi.params import Body
 from pydantic import BaseModel
 from random import randrange
-from fastapi import Response, status, HTTPException
+from fastapi import Response, status, HTTPException, Depends
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
 import os
 from dotenv import load_dotenv
-
+from sqlalchemy.orm import Session
 from . import models
-from .database import engine, SessionLocal
+from .database import engine, get_db
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -18,12 +18,6 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-def get_db():
-    db=SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 class Post(BaseModel):
     title: str
     content: str
@@ -74,24 +68,22 @@ def find_index_post(id):
 async def root():
     return {"Welcome on Online Social Media plateform login to get access"}
 
-@app.post("/login")
-def enter_username(payload: dict = Body(...)):
-    print(payload)
-    return {f"{payload['name'] } logged In Sucsessfully"}
-
-# @app.post("/createpost")
-def create_post(payload: dict = Body(...)):
-    print(payload)
-    
-    return {f"new post with '{payload['title']}' has beem added successfully"}
-
-@app.get("/posts")
-def get_posts():
-    cursor.execute("""SELECT * FROM posts""")
-    posts=cursor.fetchall()
+@app.get("/getposts")
+def get_posts(db: Session = Depends(get_db)):
+    posts=db.query(models.Post).all()
     return {"data": posts}
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
+def create_post(new_post: Post, db: Session = Depends(get_db)):
+
+    # post = models.Post(title=new_post.title, content=new_post.content)
+    post= models.Post(**new_post.model_dump())
+    db.add(post)       # stage it
+    db.commit()        # save to DB
+    db.refresh(post)   # get the returned data (like RETURNING *)
+    return {"data": post}
+
+# @app.post("/posts", status_code=status.HTTP_201_CREATED)
 def create_post(new_post : Post, response:Response):
     # post_dict=new_post.model_dump()
     # post_dict['id']=randrange(0,1000000)
@@ -105,7 +97,7 @@ def create_post(new_post : Post, response:Response):
     return {"data": new_post}
     
 
-@app.get("/posts/{id}")
+# @app.get("/posts/{id}")
 def get_post(id:int, response :Response):
 
     # return {"post_detail": f"Content: {my_posts[id].get('content')}, Title: {my_posts[id].get('title')}"}
@@ -123,7 +115,17 @@ def get_post(id:int, response :Response):
         return{
         "post_detail": post}
     
-@app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.get("/posts/{id}")
+def get_post(id:int, db: Session = Depends(get_db)):
+    post = db.query(models.Post).filter(models.Post.id == id).first()
+
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"post with id: {id} does not exist")
+    else:
+        return{"data": post}
+
+# @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id:int):
     # index=find_index_post(id)
     # if index is None:
@@ -144,7 +146,16 @@ def delete_post(id:int):
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@app.put("/posts/{id}")
+@app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(id:int, db: Session = Depends(get_db)):
+    post= db.query(models.Post).filter(models.Post.id == id)
+    if post.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"post with id: {id} does not exist")
+    else:
+        post.delete(synchronize_session=False) #false just delete the from the db, dont bother updating the session cache
+
+# @app.put("/posts/{id}")
 def update_post(id:int, updated_post:Post):
     # index=find_index_post(id)
     # if index is None:
@@ -167,3 +178,17 @@ def update_post(id:int, updated_post:Post):
         detail=f"post with id: {id} does not exist")
 
     return {"data": post}
+
+@app.put("/posts/{id}")
+def update_post(id:int, updated_post:Post, db: Session = Depends(get_db)):
+    post_query= db.query(models.Post).filter(models.Post.id == id)
+    post=post_query.first()
+
+    if post is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"post with id: {id} does not exist")
+
+    post_query.update(updated_post.model_dump(), synchronize_session=False)
+    db.commit()
+
+    return {"data": post_query.first()}
