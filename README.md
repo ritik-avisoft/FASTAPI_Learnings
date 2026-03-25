@@ -33,7 +33,7 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 - Duplicate email check returns `409 Conflict` before attempting DB insert
 - Learned: `APIRouter`, `include_router()`, password hashing, `EmailStr`, `409 Conflict`
 
-## Phase 5 — JWT Authentication (Current ✅)
+## Phase 5 — JWT Authentication
 - Added `routers/auth.py` with `POST /auth/login` endpoint using `OAuth2PasswordRequestForm`
 - Implemented JWT token creation and verification in `oauth2.py` using `python-jose`
 - `create_access_token()` encodes `user_id` with expiry into a signed JWT
@@ -47,6 +47,16 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 - `SECRET_KEY` and token config loaded from `.env` via `os.getenv()`
 - Learned: JWT, `OAuth2PasswordBearer`, `OAuth2PasswordRequestForm`, ownership checks, `403 Forbidden`
 
+## Phase 6 — Votes, Alembic & Query Params (Current ✅)
+- Added `Vote` ORM model with composite PK `(user_id, post_id)` — prevents duplicate votes at DB level
+- Vote endpoint `POST /vote` — `dir=1` adds vote, `dir=0` removes it
+- Posts now return vote counts via LEFT JOIN + `func.count()` + `GROUP BY`
+- `GET /posts` supports `limit`, `skip`, `search` query params for pagination and filtering
+- Set up **Alembic** for versioned DB migrations — 6 migration files with full upgrade/downgrade chain
+- Switched from `os.getenv()` to `pydantic-settings` (`BaseSettings`) for typed, validated env config
+- Added `CORSMiddleware` to allow browser frontends to call the API
+- Learned: composite PK, LEFT JOIN aggregates, Alembic migrations, `pydantic-settings`, CORS
+
 ## Core Concepts (All Phases)
 - **Decorators** — `@router.get()` registers a function as an API route
 - **Pydantic** — validates request body, `model_dump()` converts to dict, `EmailStr` validates email format
@@ -58,7 +68,12 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 - **Password Hashing** — `pwdlib` hashes passwords before storing in DB
 - **JWT** — `python-jose` signs and verifies access tokens
 - **Ownership** — routes check `post.owner_id == current_user.id` before mutating data
-- **Environment Variables** — credentials and secrets stored in `.env`, never hardcoded
+- **Environment Variables** — credentials and secrets stored in `.env`, loaded via `pydantic-settings`
+- **Alembic** — versioned DB migrations with `upgrade()`/`downgrade()`, chained via `down_revision`
+- **Votes** — composite PK `(user_id, post_id)` enforces one vote per user per post
+- **LEFT JOIN + func.count()** — aggregate vote counts per post, includes posts with 0 votes
+- **Query Params** — `limit`, `skip`, `search` declared in function signature, auto-parsed by FastAPI
+- **CORS** — `CORSMiddleware` allows browser cross-origin requests
 
 ---
 
@@ -71,6 +86,7 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 | 3     | PostgreSQL    | `SQLAlchemy` ORM, `models.py`                                 |
 | 4     | PostgreSQL    | `APIRouter`, `User` model, `pwdlib` password hash             |
 | 5     | PostgreSQL    | JWT auth, `oauth2.py`, protected routes, ownership checks     |
+| 6     | PostgreSQL    | Votes, Alembic migrations, `pydantic-settings`, CORS          |
 
 ---
 
@@ -99,16 +115,15 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 | `my_posts.pop(index)` | `cursor.execute("DELETE FROM posts WHERE id=%s RETURNING *")` | `post.delete(synchronize_session=False)` → `db.commit()` |
 
 ### Project Files
-| Phase 1 | Phase 3 | Phase 4 | Phase 5 |
-|---|---|---|---|
-| Only `main.py` | `main.py` + `database.py` + `models.py` | + `routers/` + `utils/` + `schemas.py` | + `oauth2.py` + `routers/auth.py` |
-| No DB config | SQLAlchemy engine, session, `Base` | Routes split into `post.py` + `user.py` | JWT token logic, protected routes |
-| Hardcoded data | Credentials in `.env` via `python-dotenv` | Password hashing in `utils/hash_password.py` | `SECRET_KEY` in `.env` |
+| Phase 1 | Phase 3 | Phase 4 | Phase 5 | Phase 6 |
+|---|---|---|---|---|
+| Only `main.py` | `main.py` + `database.py` + `models.py` | + `routers/` + `utils/` + `schemas.py` | + `oauth2.py` + `routers/auth.py` | + `routers/vote.py` + `alembic/` + `config.py` |
+| No DB config | SQLAlchemy engine, session, `Base` | Routes split into `post.py` + `user.py` | JWT token logic, protected routes | Alembic migrations, vote system, CORS |
 
 ### Dependencies
-| Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 5 |
-|---|---|---|---|---|
-| `fastapi`, `uvicorn` | + `psycopg2-binary` | + `sqlalchemy`, `python-dotenv` | + `pwdlib`, `email-validator` | + `python-jose[cryptography]` |
+| Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 5 | Phase 6 |
+|---|---|---|---|---|---|
+| `fastapi`, `uvicorn` | + `psycopg2-binary` | + `sqlalchemy`, `python-dotenv` | + `pwdlib`, `email-validator` | + `python-jose[cryptography]` | + `alembic`, `pydantic-settings` |
 
 ---
 
@@ -122,7 +137,7 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 ### Posts
 | Method | Endpoint       | Description             | Auth Required |
 |--------|----------------|-------------------------|---------------|
-| GET    | `/posts`       | Get all posts           | Yes           |
+| GET    | `/posts`       | Get all posts (supports `limit`, `skip`, `search`) | Yes |
 | POST   | `/posts`       | Create a new post       | Yes           |
 | GET    | `/posts/{id}`  | Get a single post by ID | Yes           |
 | PUT    | `/posts/{id}`  | Update a post (owner only) | Yes        |
@@ -134,6 +149,11 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 | POST   | `/users/createusers`   | Register a new user  | No            |
 | GET    | `/users`               | Get all users        | No            |
 | GET    | `/users/{id}`          | Get a user by ID     | No            |
+
+### Votes
+| Method | Endpoint  | Description                        | Auth Required |
+|--------|-----------|------------------------------------|---------------|
+| POST   | `/vote`   | Add (`dir=1`) or remove (`dir=0`) a vote | Yes      |
 
 ### Root
 | Method | Endpoint | Description     |
@@ -158,7 +178,10 @@ FASTAPI/
 │   ├── database.py        # SQLAlchemy engine & session setup
 │   ├── models.py          # ORM models (Post, User)
 │   ├── schemas.py         # Pydantic schemas (Post, User, Token, TokenData)
-│   └── oauth2.py          # JWT creation, verification, get_current_user dependency
+│   ├── oauth2.py          # JWT creation, verification, get_current_user dependency
+│   └── config.py          # pydantic-settings BaseSettings — typed env config
+├── alembic/               # DB migration files (versioned schema changes)
+│   └── versions/          # 6 migration files chained via down_revision
 ├── .env                   # DB credentials + SECRET_KEY (not committed)
 ├── .gitignore
 └── README.md
@@ -175,6 +198,8 @@ DB_NAME=<your_db_name>
 DB_USER=<your_db_user>
 DB_PASSWORD=<your_password>
 SECRET_KEY=<your_secret_key>
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
 > Generate a secure `SECRET_KEY` with: `openssl rand -hex 32`
@@ -185,7 +210,7 @@ SECRET_KEY=<your_secret_key>
 
 ```bash
 # Install dependencies
-pip install fastapi uvicorn psycopg2-binary sqlalchemy python-dotenv pwdlib email-validator "python-jose[cryptography]"
+pip install fastapi uvicorn psycopg2-binary sqlalchemy python-dotenv pwdlib email-validator "python-jose[cryptography]" alembic pydantic-settings
 
 # Start the server
 uvicorn app.main:app --reload
