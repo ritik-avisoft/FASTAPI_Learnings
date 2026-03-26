@@ -1,7 +1,6 @@
 # FastAPI — Core Concepts & Learning Project
 
-A hands-on project built while learning the **core concepts of FastAPI**, progressing from in-memory storage to a real PostgreSQL database with SQLAlchemy ORM, and full JWT authentication.
-
+A hands-on project built while learning the **core concepts of FastAPI**, progressing from in-memory storage to a real PostgreSQL database with SQLAlchemy ORM, full JWT authentication, and voting system.
 ---
 
 ## Phase 1 — In-Memory CRUD (Starting Point)
@@ -47,7 +46,7 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 - `SECRET_KEY` and token config loaded from `.env` via `os.getenv()`
 - Learned: JWT, `OAuth2PasswordBearer`, `OAuth2PasswordRequestForm`, ownership checks, `403 Forbidden`
 
-## Phase 6 — Votes, Alembic & Query Params (Current ✅)
+## Phase 6 — Votes, Alembic & Query Params (Current)
 - Added `Vote` ORM model with composite PK `(user_id, post_id)` — prevents duplicate votes at DB level
 - Vote endpoint `POST /vote` — `dir=1` adds vote, `dir=0` removes it
 - Posts now return vote counts via LEFT JOIN + `func.count()` + `GROUP BY`
@@ -147,6 +146,7 @@ A hands-on project built while learning the **core concepts of FastAPI**, progre
 | Method | Endpoint               | Description          | Auth Required |
 |--------|------------------------|----------------------|---------------|
 | POST   | `/users/createusers`   | Register a new user  | No            |
+| POST   | `/users/updateprofile` | Update user profile  | Yes           |
 | GET    | `/users`               | Get all users        | No            |
 | GET    | `/users/{id}`          | Get a user by ID     | No            |
 
@@ -206,17 +206,64 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 
 ---
 
-## How to Run
+## Getting Started
 
-```bash
-# Install dependencies
-pip install fastapi uvicorn psycopg2-binary sqlalchemy python-dotenv pwdlib email-validator "python-jose[cryptography]" alembic pydantic-settings
+### Prerequisites
 
-# Start the server
-uvicorn app.main:app --reload
-```
+- Python 3.8+
+- PostgreSQL 12+
+- pip (Python package manager)
 
-Open `http://127.0.0.1:8000/docs` for the interactive **Swagger UI**.
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd FASTAPI
+   ```
+
+2. **Create a virtual environment** (recommended)
+   ```bash
+   python -m venv venv
+   
+   # Windows
+   venv\Scripts\activate
+   
+   # macOS/Linux
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+   
+   Or install manually:
+   ```bash
+   pip install fastapi uvicorn psycopg2-binary sqlalchemy python-dotenv pwdlib email-validator "python-jose[cryptography]" alembic pydantic-settings
+   ```
+
+4. **Set up PostgreSQL database**
+   - Create a new PostgreSQL database
+   - Note your database credentials
+
+5. **Configure environment variables**
+   - Create a `.env` file in the root directory
+   - Add your configuration (see Environment Variables section below)
+
+6. **Run database migrations**
+   ```bash
+   alembic upgrade head
+   ```
+
+7. **Start the server**
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+
+8. **Access the API**
+   - Swagger UI: `http://127.0.0.1:8000/docs`
+   - ReDoc: `http://127.0.0.1:8000/redoc`
 
 ---
 
@@ -232,3 +279,53 @@ Open `http://127.0.0.1:8000/docs` for the interactive **Swagger UI**.
 - [pwdlib](https://pypi.org/project/pwdlib/)
 - [email-validator](https://pypi.org/project/email-validator/)
 - [python-jose](https://pypi.org/project/python-jose/)
+- [Alembic](https://alembic.sqlalchemy.org/)
+- [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)
+
+---
+
+## Features
+
+✅ RESTful API with FastAPI  
+✅ PostgreSQL database with SQLAlchemy ORM  
+✅ JWT authentication & authorization  
+✅ Password hashing with pwdlib  
+✅ Database migrations with Alembic  
+✅ Voting system with composite primary keys  
+✅ Query parameters (pagination, search)  
+✅ CORS enabled for frontend integration  
+✅ Ownership-based access control  
+✅ Email validation  
+✅ Interactive API documentation (Swagger UI)
+
+---
+
+## Learning Outcomes
+
+This project demonstrates:
+- Building production-ready REST APIs
+- Database design and ORM usage
+- Authentication and authorization patterns
+- API security best practices
+- Database migrations and version control
+- Dependency injection
+- Request validation with Pydantic
+- Error handling and HTTP status codes
+
+---
+
+## Contributing
+
+This is a learning project, but suggestions and improvements are welcome!
+
+---
+
+## License
+
+This project is open source and available for educational purposes.
+
+---
+
+## Acknowledgments
+
+Built while following FastAPI best practices and learning modern Python web development.

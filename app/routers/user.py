@@ -1,7 +1,7 @@
 from fastapi import status, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
 from ..database import get_db
-from .. import models, schemas
+from .. import models, schemas, oauth2
 from ..utils.hash_password import Hash
 
 
@@ -38,3 +38,30 @@ def create_users(new_user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     return user 
+
+@router.post("/updateprofile")
+def update_profile(updated_user: schemas.UserUpdate, db: Session = Depends(get_db), current_user:str = Depends(oauth2.get_current_user)):
+    user_query = db.query(models.User).filter(models.User.id == current_user.id)
+    user = user_query.first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"user with id: {id} does not exist")
+    
+    data = updated_user.model_dump(exclude_unset=True)
+
+    if "name" not in data and "phone_number" not in data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one of 'name' or 'phone_number' must be provided."
+        )
+
+    if "name" in data and (data["name"] is None or data["name"].strip() == ""):
+        raise HTTPException(
+            status_code=400,
+            detail="Name cannot be empty"
+        )
+
+    user_query.update(data, synchronize_session=False)
+    db.commit()
+
+    return user_query.first()

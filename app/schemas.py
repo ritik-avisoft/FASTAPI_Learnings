@@ -42,3 +42,7 @@ class Vote(BaseModel):
 class PostOut(BaseModel):
     Post: Post
     votes:int
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    phone_number: Optional[int] = None

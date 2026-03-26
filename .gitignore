@@ -2,15 +2,23 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
 # Virtual environments
 venv/
-__pycache__/
+env/
+ENV/
 *.pyc
 .env
+.env.local
+
+# Database
+*.db
+*.sqlite3
 
 # Editor/IDE files
 .vscode/
+.idea/
 *.swp
 *.swo
 
@@ -25,6 +33,7 @@ NOTES.md
 *.log
 coverage.xml
 htmlcov/
+.pytest_cache/
 
 # Python package build
 build/
@@ -33,3 +42,6 @@ dist/
 
 # Uvicorn run files
 *.pid
+
+# Alembic
+# Keep alembic/ folder but ignore local config if needed

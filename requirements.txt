@@ -1,7 +1,10 @@
 fastapi
-uvicorn
-psycopg2
-pydantic
+uvicorn[standard]
+psycopg2-binary
+sqlalchemy
 python-dotenv
-pyjwt
-passlib[bcrypt]
+pwdlib
+email-validator
+python-jose[cryptography]
+alembic
+pydantic-settings
